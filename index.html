@@ -324,9 +324,16 @@ function build(s,e){
 }
 
 // 🌐 终极双擎同步
+// 🌐 终极双擎同步：自动追踪列名 & 智能修正日期
 async function doSync(){
   const dot=$('dot');dot.className='dot sp';set('st','下载数据中...');
   
+  if(ORDERS_CSV_URL.includes('替换') || ADS_CSV_URL.includes('替换')){
+      alert("请先在代码里贴上你的真实 CSV 链接！");
+      dot.className='dot';set('st','⚠ 缺少链接');
+      return;
+  }
+
   try{
     const [resOrd, resAds] = await Promise.all([
       fetch(ORDERS_CSV_URL + '&t=' + Date.now()),
@@ -339,30 +346,66 @@ async function doSync(){
     D.length = 0; 
     JO.length = 0;
     
-    // 超强清洗器：把 "RM 1,500.00" 清洗成 1500
+    // 超强数字清洗器：把 "RM 1,500.00" 完美变成 1500
     const cleanNum = (str) => parseFloat((str||'').replace(/[^0-9.-]+/g, '')) || 0;
+    // 智能分割 CSV（避开内容自带的逗号）
+    const parseCSV = (line) => line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/(^"|"$)/g, '').trim());
 
-    // 🛠️ 解析 1：订单表
-    const linesO = txtOrd.trim().split('\n').slice(1);
-    linesO.forEach(line => {
-      const c = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/(^"|"$)/g, '').trim());
-      if(c.length < 5) return;
+    // ──────────────────────────────────────────
+    // 🛠️ 解析 1：订单表 (Order List)
+    // ──────────────────────────────────────────
+    const linesO = txtOrd.trim().split('\n');
+    if(linesO.length < 2) throw new Error("订单表没有数据！");
+
+    // 获取小写的表头，让代码自己去找列在哪里！
+    const headO = parseCSV(linesO[0].toLowerCase());
+    
+    const colO = {
+        date: headO.findIndex(h => h.includes('date') || h.includes('日期')),
+        sales: headO.findIndex(h => h.includes('paid') || h.includes('sales') || h.includes('金额') || h.includes('销售') || h.includes('amount')),
+        type: headO.findIndex(h => h.includes('type') || h.includes('新老') || h.includes('customer')),
+        chan: headO.findIndex(h => h.includes('channel') || h.includes('渠道') || h.includes('platform')),
+        state: headO.findIndex(h => h.includes('state') || h.includes('州')),
+        reg: headO.findIndex(h => h.includes('region') || h.includes('区'))
+    };
+
+    // 【防踩坑雷达】如果找不到销售额那一列，直接弹窗报警！
+    if(colO.sales === -1) {
+        alert("⚠️ 严重警告：在订单表中找不到【销售额 / Paid / Sales】这一列！\n\n原因：你可能发布错了 Tab，系统抓到的表头是：\n" + linesO[0]);
+        dot.className='dot';set('st','⚠ 选错表格Tab了');
+        return;
+    }
+
+    linesO.slice(1).forEach(line => {
+      const c = parseCSV(line);
+      if(c.length < 3) return;
       
-      // 兼容所有奇怪的日期格式
-      const dObj = new Date(c[0]);
-      if(isNaN(dObj)) return; 
-      const date = dObj.toISOString().slice(0,10);
-
-      // 这里完美对应你之前的列：渠道(B), 州(C), 区域(D), 销售额(E), 新老客(F)
-      const channel = c[1] || 'Other';      
-      const state   = c[2] || 'Other';      
-      const region  = c[3] || 'WM';         
-      const sales   = cleanNum(c[4]);       
-      const type    = (c[5] || '').toUpperCase();  
-
-      if(sales > 0) {
-          JO.push([date, channel, state, region, sales, type]);
+      let dStr = c[colO.date !== -1 ? colO.date : 0];
+      if(!dStr) return;
+      
+      // 智能日期修正 (解决马来西亚 DD/MM/YYYY 倒转问题)
+      let date = "";
+      if(dStr.includes('/')) {
+          let p = dStr.split('/');
+          if(p[2]?.length === 4) {
+              date = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`; // 强转 YYYY-MM-DD
+          } else {
+              date = new Date(dStr).toISOString().slice(0,10);
+          }
+      } else {
+          let dObj = new Date(dStr);
+          if(isNaN(dObj)) return;
+          date = dObj.toISOString().slice(0,10);
       }
+
+      // 提取精准数据
+      const sales = cleanNum(c[colO.sales]);
+      const type = (c[colO.type !== -1 ? colO.type : 5] || '').toUpperCase();
+      const channel = c[colO.chan !== -1 ? colO.chan : 1] || 'Other';
+      const state = c[colO.state !== -1 ? colO.state : 2] || 'Other';
+      const region = c[colO.reg !== -1 ? colO.reg : 3] || 'WM';
+
+      if(sales > 0) JO.push([date, channel, state, region, sales, type]);
 
       let i = D.findIndex(x => x[0] === date);
       if(i < 0) {
@@ -371,27 +414,50 @@ async function doSync(){
       }
       D[i][1] += sales; 
       if(type.includes('NEW') || type.includes('新客')) { 
-          D[i][4]++; 
-          D[i][6] += sales; 
-      } else { 
-          D[i][5]++; 
-          D[i][7] += sales; 
+          D[i][4]++; D[i][6] += sales; 
+      } else if (type !== '') { 
+          D[i][5]++; D[i][7] += sales; 
       }
     });
 
-    // 🛠️ 解析 2：广告表
-    const linesA = txtAds.trim().split('\n').slice(1);
-    linesA.forEach(line => {
-      const c = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/(^"|"$)/g, '').trim());
-      if(c.length < 3) return;
-      
-      const dObj = new Date(c[0]);
-      if(isNaN(dObj)) return;
-      const date = dObj.toISOString().slice(0,10);
+    // ──────────────────────────────────────────
+    // 🛠️ 解析 2：广告表 (Ads List)
+    // ──────────────────────────────────────────
+    const linesA = txtAds.trim().split('\n');
+    const headA = parseCSV(linesA[0].toLowerCase());
+    
+    const colA = {
+        date: headA.findIndex(h => h.includes('date') || h.includes('日期')),
+        spend: headA.findIndex(h => h.includes('spend') || h.includes('cost') || h.includes('广告费')),
+        msg: headA.findIndex(h => h.includes('message') || h.includes('消息') || h.includes('msg'))
+    };
 
-      // 花费在 B列 和 C列相加，消息数在 E列 (c[4])
-      const spend = cleanNum(c[1]) + cleanNum(c[2]); 
-      const msg = parseInt(cleanNum(c[4])) || 0;
+    linesA.slice(1).forEach(line => {
+      const c = parseCSV(line);
+      if(c.length < 2) return;
+      
+      let dStr = c[colA.date !== -1 ? colA.date : 0];
+      if(!dStr) return;
+      let date = "";
+      if(dStr.includes('/')) {
+          let p = dStr.split('/');
+          if(p[2]?.length === 4) date = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+          else date = new Date(dStr).toISOString().slice(0,10);
+      } else {
+          let dObj = new Date(dStr);
+          if(!isNaN(dObj)) date = dObj.toISOString().slice(0,10);
+          else return;
+      }
+
+      // 如果有专用的花费列就用，否则默认相加前两列
+      let spend = 0;
+      if(colA.spend !== -1) {
+          spend = cleanNum(c[colA.spend]);
+      } else {
+          spend = cleanNum(c[1]) + cleanNum(c[2]); 
+      }
+      
+      const msg = parseInt(cleanNum(c[colA.msg !== -1 ? colA.msg : 4])) || 0;
 
       let i = D.findIndex(x => x[0] === date);
       if(i < 0) {
@@ -402,21 +468,18 @@ async function doSync(){
       D[i][3] += msg;
     });
 
+    // 日期排序 & 刷新画面
     D.sort((a,b) => a[0].localeCompare(b[0]));
-
     dot.className='dot';
     set('st',`✓ ${new Date().toLocaleTimeString('zh-MY',{hour:'2-digit',minute:'2-digit'})} · 数据同步成功！`);
     
     setF('thisMonth'); 
   }catch(e){
     console.error("同步失败:", e);
-    dot.className='dot';set('st','⚠ 读取失败，请检查 CSV 链接');
+    alert("⚠️ 数据读取发生严重错误！\n错误信息: " + e.message);
+    dot.className='dot';set('st','⚠ 读取失败');
   }
 }
-
-window.onload = () => {
-    doSync();
-};
 </script>
 </body>
 </html>
