@@ -104,7 +104,6 @@ html,body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;fo
 </div>
 
 <div class="mn">
-  <!-- ESOM -->
   <div class="ec">
     <div class="gc">
       <canvas id="gc" width="88" height="88"></canvas>
@@ -122,7 +121,6 @@ html,body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;fo
     </div>
   </div>
 
-  <!-- KPI grid -->
   <div class="mg">
     <div class="mc" style="--c:var(--gr)"><div class="ml">Sales</div><div class="mv" id="kSales">—</div><div class="ms" id="kOrd">—</div></div>
     <div class="mc" style="--c:var(--am)"><div class="ml">Ads Spend (incl SST)</div><div class="mv" id="kSpend">—</div><div class="ms" id="kSpendSub">—</div></div>
@@ -132,7 +130,6 @@ html,body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;fo
     <div class="mc" style="--c:var(--te)"><div class="ml">Orders</div><div class="mv" id="kOrdN">—</div><div class="ms" id="kNR">—</div></div>
   </div>
 
-  <!-- Chart -->
   <div class="cd">
     <div class="ch">Daily
       <div style="display:flex;gap:10px;font-size:10px">
@@ -144,7 +141,6 @@ html,body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;fo
     <div class="cw"><canvas id="mc"></canvas></div>
   </div>
 
-  <!-- New vs Repeat -->
   <div class="cd">
     <div class="ch">New vs Repeat</div>
     <div class="nr">
@@ -159,19 +155,16 @@ html,body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;fo
     </div>
   </div>
 
-  <!-- Channel (Jun only) -->
   <div class="cd" id="chanCard">
     <div class="ch">Channel</div>
     <div id="chanList"></div>
   </div>
 
-  <!-- State (Jun only) -->
   <div class="cd" id="stateCard">
     <div class="ch">State</div>
     <div style="padding:8px 14px" id="stateList"></div>
   </div>
 
-  <!-- Region + Summary -->
   <div class="g2">
     <div class="cd">
       <div class="ch">Region</div>
@@ -1026,59 +1019,46 @@ function build(s,e){
 async function doSync(){
   const dot=$('dot');dot.className='dot sp';set('st','更新中...');
   try{
-    // 强制加时间戳，防止浏览器偷懒读旧缓存
     const r=await fetch(ADS_URL+'&t='+Date.now());
     const txt=await r.text();
-    
-    // 按行切分数据
     const lines=txt.trim().split('\n').slice(1);
     let updated=0;
 
     lines.forEach(line=>{
-      // 🌟 高级 CSV 破解法：防止数字里的逗号（如 "1,200"）打断代码
+      // 高级 CSV 解析（防止逗号切错位）
       const c = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/(^"|"$)/g, '').trim());
       
-      if(c.length < 2) return; // 空行直接跳过
+      // 因为你的表格里消息数在 c[4]，所以需要保证这行至少有 5 个格子
+      if(c.length < 5) return; 
       
       const date = c[0]; 
-      if(!date.match(/^\d{4}-\d{2}-\d{2}$/)) return; // 确保日期格式是 2026-06-04
+      if(!date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
 
-      // 提取你的表格数据（自动去掉数字里的逗号和符号）
-      const sales = parseFloat(c[1]?.replace(/,/g,'')) || 0;
-      const spend = parseFloat(c[2]?.replace(/,/g,'')) || 0;
-      const msg = parseInt(c[3]?.replace(/,/g,'')) || 0;
-      const newO = parseInt(c[4]?.replace(/,/g,'')) || 0;
-      const repO = parseInt(c[5]?.replace(/,/g,'')) || 0;
-      const newS = parseFloat(c[6]?.replace(/,/g,'')) || 0;
-      const repS = parseFloat(c[7]?.replace(/,/g,'')) || 0;
+      // 根据你最原始的代码逻辑：c[1] + c[2] 是总广告费，c[4] 是消息数
+      const sp = (parseFloat(c[1]?.replace(/,/g,'')) || 0) + (parseFloat(c[2]?.replace(/,/g,'')) || 0);
+      const msg = parseInt(c[4]?.replace(/,/g,'')) || 0;
 
-      // 核心逻辑：在原本的图表数据(D)里找，今天的数据有了没？
-      const i = D.findIndex(x => x[0] === date);
-      
-      if(i >= 0) {
-        // 如果有了，就用 Google Sheets 的最新数据【覆盖】它
-        if(sales > 0) D[i][1] = sales;
-        if(spend > 0) D[i][2] = spend;
-        if(msg > 0) D[i][3] = msg;
-        if(newO > 0) D[i][4] = newO;
-        if(repO > 0) D[i][5] = repO;
-        if(newS > 0) D[i][6] = newS;
-        if(repS > 0) D[i][7] = repS;
-      } else {
-        // 如果是新的一天，就【新增】进大盘里
-        D.push([date, sales, spend, msg, newO, repO, newS, repS]);
+      if(sp > 0 || msg > 0) {
+        const i = D.findIndex(x => x[0] === date);
+        if(i >= 0) {
+          // 如果日期已经存在，则覆盖更新旧日期的广告费和消息数
+          D[i][2] = sp;
+          D[i][3] = msg;
+        } else {
+          // 🚀 最关键的一步：如果是全新的一天，自动将其新增进大盘中 (销售额先默认为 0)
+          D.push([date, 0, sp, msg, 0, 0, 0, 0]);
+        }
+        updated++;
       }
-      updated++;
     });
 
     dot.className='dot';
-    set('st',`✓ ${new Date().toLocaleTimeString('zh-MY',{hour:'2-digit',minute:'2-digit'})} · 已同步 ${updated} 行数据`);
+    set('st',`✓ ${new Date().toLocaleTimeString('zh-MY',{hour:'2-digit',minute:'2-digit'})} · 已同步 ${updated} 天数据`);
   }catch(e){
     console.error("同步失败:", e);
-    dot.className='dot';set('st','⚠ 数据读取失败，请检查表格');
+    dot.className='dot';set('st','⚠ 数据读取失败，请检查链接');
   }
   
-  // 刷新大盘画面
   const s=$('ds').value, en=$('de').value;
   build(s,en);
 }
