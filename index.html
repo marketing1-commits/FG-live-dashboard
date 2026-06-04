@@ -77,7 +77,7 @@ html,body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;fo
 <div class="hd">
   <div class="br"><span class="bt">FG</span>FlexiGlo</div>
   <div style="display:flex;align-items:center;gap:8px">
-    <span style="font-size:11px;color:var(--mu)" id="st">已验证数据</span>
+    <span style="font-size:11px;color:var(--mu)" id="st">等待同步...</span>
     <button class="sb" onclick="doSync()">
       <span class="dot" id="dot"></span>Sync
     </button>
@@ -98,7 +98,7 @@ html,body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;fo
 <div class="dr">
   <input class="di2" type="date" id="ds" value="2026-06-01">
   <span style="color:var(--mu)">→</span>
-  <input class="di2" type="date" id="de" value="2026-06-03">
+  <input class="di2" type="date" id="de" value="2026-06-30">
   <button class="ap" onclick="applyCustom()">Apply</button>
   <span class="rn" id="rn"></span>
 </div>
@@ -183,706 +183,16 @@ html,body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;fo
 </div>
 
 <script>
-// ══════════════════════════════════════════════════════
-// VERIFIED DATA — read from Google Drive & SM_Data sheet
-// Format: [date, sales, spend, messages, newOrders, repeatOrders, newSales, repeatSales]
-// ══════════════════════════════════════════════════════
-const D = [
-// MAR 2026 — spend from SM_Data CSV, orders from Orders sheet summary tab
-["2026-03-01",2386,633.30,58,6,0,2386,0],
-["2026-03-02",694,556.99,28,1,1,346,348],
-["2026-03-03",1790,722.63,43,4,0,1790,0],
-["2026-03-04",500,697.03,37,1,1,250,250],
-["2026-03-05",1442,668.98,32,5,0,1442,0],
-["2026-03-06",3481,673.79,53,10,0,3481,0],
-["2026-03-07",2039,421.57,20,6,0,2039,0],
-["2026-03-08",1790,634.35,37,4,0,1790,0],
-["2026-03-09",298,410.95,22,1,0,298,0],
-["2026-03-10",5099.85,394.25,17,14,3,3709,1390],
-["2026-03-11",1834,733.06,48,4,2,1224,610],
-["2026-03-12",1449,190.45,14,2,2,749,700],
-["2026-03-13",1293,915.79,49,3,1,893,400],
-["2026-03-14",1146,516.79,37,3,0,1146,0],
-["2026-03-15",1596.68,770.54,44,4,1,1197,400],
-["2026-03-16",1944,909.32,53,3,2,1146,798],
-["2026-03-17",3937.85,1034.55,45,9,1,3156,782],
-["2026-03-18",1372.66,984.02,55,4,0,1372.66,0],
-["2026-03-19",596,825.30,36,2,0,596,0],
-["2026-03-20",0,799.68,48,0,0,0,0],
-["2026-03-21",1820,789.28,46,2,2,820,1000],
-["2026-03-22",848,1021.79,59,2,0,848,0],
-["2026-03-23",1394,994.56,53,2,2,596,798],
-["2026-03-24",1754.19,636.33,33,3,2,1021,733],
-["2026-03-25",1104.20,1254.27,75,3,1,737,367],
-["2026-03-26",995,1007.15,65,2,1,664,331],
-["2026-03-27",2765.83,877.31,47,6,1,2374,392],
-["2026-03-28",0,778.04,54,0,0,0,0],
-["2026-03-29",1146,1092.64,45,3,0,1146,0],
-["2026-03-30",2775.17,891.68,38,7,2,2168,607],
-["2026-03-31",298,1044.71,49,1,0,298,0],
-// APR 2026 — full daily verified from SM_Data detailed section
-["2026-04-01",718,938.06,44,0,1,0,718],
-["2026-04-02",2292,954.14,42,6,0,2292,0],
-["2026-04-03",2147,1035.61,33,4,1,1849,298],
-["2026-04-04",3140,740.40,29,6,2,2292,848],
-["2026-04-05",2590,735.65,23,7,0,2590,0],
-["2026-04-06",2376,1045.42,39,7,0,2376,0],
-["2026-04-07",596,959.60,31,2,0,596,0],
-["2026-04-08",1740,789.51,34,6,0,1740,0],
-["2026-04-09",1247,801.16,40,3,0,1247,0],
-["2026-04-10",548,714.37,40,2,0,548,0],
-["2026-04-11",894,499.11,39,3,0,894,0],
-["2026-04-12",1944,672.69,39,3,2,1146,798],
-["2026-04-13",2897,854.30,32,4,3,1230,1667],
-["2026-04-14",764,840.77,35,3,0,764,0],
-["2026-04-15",2217,855.02,38,2,2,1100,1117],
-["2026-04-16",2691,665.48,23,7,0,2691,0],
-["2026-04-17",1098,883.12,46,3,0,1098,0],
-["2026-04-18",500,602.29,25,2,0,500,0],
-["2026-04-19",1247,530.35,33,2,1,848,399],
-["2026-04-20",2038,771.11,27,6,1,1740,298],
-["2026-04-21",2809,764.53,33,6,2,1692,1117],
-["2026-04-22",2696,716.24,32,4,3,1348,1348],
-["2026-04-23",1297,633.18,28,4,0,1297,0],
-["2026-04-24",1795,705.46,45,4,1,1396,399],
-["2026-04-25",1042,669.63,35,3,1,846,196],
-["2026-04-26",3096,850.50,48,6,2,2193,903],
-["2026-04-27",2878,1158.19,51,5,2,1442,1436],
-["2026-04-28",2244,1118.63,54,6,0,2244,0],
-["2026-04-29",3006,942.54,31,5,3,1490,1516],
-["2026-04-30",1192,1597.47,61,4,0,1192,0],
-// MAY 2026 — full daily verified from SM_Data detailed section
-["2026-05-01",3713,1144.18,41,7,2,2596,1117],
-["2026-05-02",2664,868.25,50,5,2,1696,968],
-["2026-05-03",3390,1072.65,52,7,2,2491,899],
-["2026-05-04",4041,1096.18,28,9,1,3642,399],
-["2026-05-05",8872,1114.91,47,14,8,5288,3584],
-["2026-05-06",6310,1662.22,63,11,2,4492,1818],
-["2026-05-07",4644,1693.66,80,9,2,3846,798],
-["2026-05-08",3157,1326.11,50,7,1,2439,718],
-["2026-05-09",2689,1007.04,47,7,1,2290,399],
-["2026-05-10",3496,1124.92,49,10,0,3496,0],
-["2026-05-11",4024,1355.56,61,10,1,3688,336],
-["2026-05-12",2963,1117.00,49,5,4,1596,1367],
-["2026-05-13",4072,1190.83,48,9,2,2636,1436],
-["2026-05-14",3764,1083.00,43,8,2,2647,1117],
-["2026-05-15",2040,896.50,45,6,0,2040,0],
-["2026-05-16",2943,756.62,51,6,1,2544,399],
-["2026-05-17",947,1070.78,44,2,1,548,399],
-["2026-05-18",5926,1143.56,48,10,5,2790,3136],
-["2026-05-19",4707,1177.23,57,10,3,3292,1415],
-["2026-05-20",3193,961.39,40,7,1,2794,399],
-["2026-05-21",2290,935.49,63,6,1,1992,298],
-["2026-05-22",3430,1006.72,54,5,2,1994,1436],
-["2026-05-23",1495,798.12,51,4,1,1096,399],
-["2026-05-24",2832,996.36,52,6,0,2832,0],
-["2026-05-25",3918,1139.52,60,10,0,3918,0],
-["2026-05-26",2072,1042.03,53,6,0,2072,0],
-["2026-05-27",3700,868.23,49,8,2,2732,968],
-["2026-05-28",3987,835.93,56,8,2,2870,1117],
-["2026-05-29",2764,780.54,40,7,0,2764,0],
-["2026-05-30",846,564.17,32,3,0,846,0],
-["2026-05-31",548,538.13,28,2,0,548,0],
-// JUN 2026 — verified from Orders sheet Jun tab + SM_Data
-["2026-06-01",2984,976.73,60,6,1,2434,550],
-["2026-06-02",3895,981.23,80,6,3,2060,1835],
-["2026-06-03",4717,1097.06,73,8,3,3201,1516],
-];
+// 🌟 数据容器全部清空，等待同步注入！
+let D = [];
+let JO = [];
 
-// ALL orders Mar-Jun 2026 — channel/state/region breakdown
-// [date, channel, state, region, paid, type]
-const JO = [
-["2026-03-01","WhatsApp","Johor","WM",298,"NEW"],
-["2026-03-01","Facebook","Selangor","WM",298,"NEW"],
-["2026-03-01","Facebook","Johor","WM",597,"NEW"],
-["2026-03-01","Facebook","Johor","WM",298,"NEW"],
-["2026-03-01","Facebook","Kedah","WM",298,"NEW"],
-["2026-03-01","Facebook","Perak","WM",597,"NEW"],
-["2026-03-02","WhatsApp","Penang","WM",298,"NEW"],
-["2026-03-02","Facebook","Kedah","WM",396,"REPEAT"],
-["2026-03-03","Facebook","Perak","WM",597,"NEW"],
-["2026-03-03","Facebook","Kedah","WM",298,"NEW"],
-["2026-03-03","Facebook","Johor","WM",298,"NEW"],
-["2026-03-03","Facebook","Penang","WM",597,"NEW"],
-["2026-03-04","Facebook","Perak","WM",250,"NEW"],
-["2026-03-04","WhatsApp","Selangor","WM",250,"REPEAT"],
-["2026-03-05","Facebook","Johor","WM",298,"NEW"],
-["2026-03-05","Facebook","Selangor","WM",250,"NEW"],
-["2026-03-05","Facebook","Kuala Lumpur","WM",298,"NEW"],
-["2026-03-05","WhatsApp","Selangor","WM",298,"NEW"],
-["2026-03-05","Facebook","Selangor","WM",298,"NEW"],
-["2026-03-06","Facebook","Johor","WM",298,"NEW"],
-["2026-03-06","WhatsApp","Kuala Lumpur","WM",298,"NEW"],
-["2026-03-06","WhatsApp","Selangor","WM",298,"NEW"],
-["2026-03-06","Facebook","Kedah","WM",298,"NEW"],
-["2026-03-06","Facebook","Johor","WM",597,"NEW"],
-["2026-03-06","Facebook","Penang","WM",298,"NEW"],
-["2026-03-06","Facebook","Johor","WM",298,"NEW"],
-["2026-03-06","Facebook","Perak","WM",298,"NEW"],
-["2026-03-06","Facebook","Selangor","WM",500,"NEW"],
-["2026-03-06","Facebook","Selangor","WM",298,"NEW"],
-["2026-03-07","Facebook","Johor","WM",250,"NEW"],
-["2026-03-07","Facebook","Penang","WM",298,"NEW"],
-["2026-03-07","Facebook","Kedah","WM",298,"NEW"],
-["2026-03-07","Facebook","Perak","WM",298,"NEW"],
-["2026-03-07","WhatsApp","Perak","WM",298,"NEW"],
-["2026-03-07","Facebook","Sarawak","EM",597,"NEW"],
-["2026-03-08","Facebook","Negeri Sembilan","WM",597,"NEW"],
-["2026-03-08","WhatsApp","Kuala Lumpur","WM",597,"NEW"],
-["2026-03-08","Facebook","Selangor","WM",298,"NEW"],
-["2026-03-08","Facebook","Selangor","WM",298,"NEW"],
-["2026-03-09","Facebook","Selangor","WM",298,"NEW"],
-["2026-03-10","Facebook","Terengganu","WM",298,"NEW"],
-["2026-03-10","Facebook","Pahang","WM",250,"REPEAT"],
-["2026-03-10","Shopee","Johor","WM",227,"NEW"],
-["2026-03-10","Shopee","Johor","WM",154,"NEW"],
-["2026-03-10","Shopee","Johor","WM",154,"NEW"],
-["2026-03-10","Shopee","Selangor","WM",468,"NEW"],
-["2026-03-10","Shopee","Johor","WM",151,"NEW"],
-["2026-03-10","Shopee","Penang","WM",468,"REPEAT"],
-["2026-03-10","Shopee","Johor","WM",227,"NEW"],
-["2026-03-10","Shopee","Melaka","WM",227,"NEW"],
-["2026-03-10","Shopee","Selangor","WM",230,"NEW"],
-["2026-03-10","Shopee","Johor","WM",468,"NEW"],
-["2026-03-10","Shopee","Sabah","EM",155,"NEW"],
-["2026-03-10","Shopee","Penang","WM",230,"NEW"],
-["2026-03-10","Shopee","Selangor","WM",468,"NEW"],
-["2026-03-10","Shopee","Perak","WM",468,"REPEAT"],
-["2026-03-10","Shopee","Penang","WM",458,"NEW"],
-["2026-03-11","Facebook","Johor","WM",298,"NEW"],
-["2026-03-11","Facebook","Johor","WM",288,"REPEAT"],
-["2026-03-11","WhatsApp","Selangor","WM",450,"REPEAT"],
-["2026-03-11","WhatsApp","Johor","WM",298,"NEW"],
-["2026-03-11","Facebook","Kelantan","WM",250,"NEW"],
-["2026-03-11","Facebook","Perak","WM",250,"NEW"],
-["2026-03-12","WhatsApp","Sabah","EM",550,"NEW"],
-["2026-03-12","Facebook","Selangor","WM",250,"NEW"],
-["2026-03-12","Facebook","Melaka","WM",250,"REPEAT"],
-["2026-03-12","Facebook","Johor","WM",399,"REPEAT"],
-["2026-03-13","Facebook","Negeri Sembilan","WM",298,"NEW"],
-["2026-03-13","Facebook","Penang","WM",399,"REPEAT"],
-["2026-03-13","Facebook","Johor","WM",298,"NEW"],
-["2026-03-13","Facebook","Pahang","WM",298,"NEW"],
-["2026-03-14","Facebook","Johor","WM",298,"NEW"],
-["2026-03-14","Facebook","Sarawak","EM",550,"NEW"],
-["2026-03-14","Facebook","Kedah","WM",298,"NEW"],
-["2026-03-15","Facebook","Johor","WM",298,"NEW"],
-["2026-03-15","Facebook","Perak","WM",399,"REPEAT"],
-["2026-03-15","Shopee","Selangor","WM",396,"NEW"],
-["2026-03-15","Shopee","Selangor","WM",119,"NEW"],
-["2026-03-15","Shopee","Selangor","WM",384,"NEW"],
-["2026-03-16","Facebook","Penang","WM",399,"REPEAT"],
-["2026-03-16","Facebook","Kuala Lumpur","WM",550,"NEW"],
-["2026-03-16","Facebook","Selangor","WM",298,"NEW"],
-["2026-03-16","Facebook","Perak","WM",399,"REPEAT"],
-["2026-03-16","Facebook","Johor","WM",298,"NEW"],
-["2026-03-17","Shopee","Sarawak","EM",367,"NEW"],
-["2026-03-17","Shopee","Selangor","WM",344,"NEW"],
-["2026-03-17","Facebook","Perak","WM",298,"NEW"],
-["2026-03-17","Facebook","Pahang","WM",550,"NEW"],
-["2026-03-17","WhatsApp","Penang","WM",550,"NEW"],
-["2026-03-17","Shopee","Selangor","WM",217,"NEW"],
-["2026-03-17","Facebook","Penang","WM",298,"NEW"],
-["2026-03-17","WhatsApp","Selangor","WM",298,"NEW"],
-["2026-03-17","WhatsApp","Sarawak","EM",298,"NEW"],
-["2026-03-17","Facebook","Kedah","WM",718,"REPEAT"],
-["2026-03-18","Facebook","Penang","WM",298,"NEW"],
-["2026-03-18","Facebook","Penang","WM",550,"NEW"],
-["2026-03-18","Shopee","Sarawak","EM",227,"NEW"],
-["2026-03-18","Facebook","Penang","WM",298,"NEW"],
-["2026-03-19","Facebook","Pahang","WM",298,"NEW"],
-["2026-03-19","WhatsApp","Melaka","WM",298,"NEW"],
-["2026-03-21","Facebook","Penang","WM",718,"REPEAT"],
-["2026-03-21","Facebook","Penang","WM",399,"REPEAT"],
-["2026-03-21","Shopee","Sarawak","EM",405,"NEW"],
-["2026-03-21","Facebook","Sabah","EM",298,"NEW"],
-["2026-03-22","Facebook","Melaka","WM",550,"NEW"],
-["2026-03-22","Facebook","Kedah","WM",298,"NEW"],
-["2026-03-23","Facebook","Negeri Sembilan","WM",298,"NEW"],
-["2026-03-23","WhatsApp","Sarawak","EM",298,"NEW"],
-["2026-03-23","WhatsApp","Penang","WM",399,"REPEAT"],
-["2026-03-23","Facebook","Kedah","WM",399,"REPEAT"],
-["2026-03-24","WhatsApp","Negeri Sembilan","WM",298,"NEW"],
-["2026-03-24","Shopee","Johor","WM",142,"REPEAT"],
-["2026-03-24","Facebook","Kedah","WM",298,"NEW"],
-["2026-03-24","WhatsApp","Johor","WM",718,"REPEAT"],
-["2026-03-24","Facebook","Johor","WM",298,"NEW"],
-["2026-03-25","Shopee","Kedah","WM",210,"REPEAT"],
-["2026-03-25","Facebook","Kuala Lumpur","WM",298,"NEW"],
-["2026-03-25","Facebook","Negeri Sembilan","WM",298,"NEW"],
-["2026-03-25","Facebook","Sabah","EM",298,"NEW"],
-["2026-03-26","Facebook","Penang","WM",399,"REPEAT"],
-["2026-03-26","Facebook","Melaka","WM",298,"NEW"],
-["2026-03-26","Facebook","Johor","WM",298,"NEW"],
-["2026-03-27","Shopee","Kedah","WM",222,"REPEAT"],
-["2026-03-27","Facebook","Johor","WM",298,"NEW"],
-["2026-03-27","Facebook","Kedah","WM",550,"NEW"],
-["2026-03-27","Facebook","Sarawak","EM",550,"NEW"],
-["2026-03-27","Facebook","Kuala Lumpur","WM",298,"NEW"],
-["2026-03-27","Facebook","Penang","WM",550,"NEW"],
-["2026-03-27","Facebook","Perak","WM",298,"NEW"],
-["2026-03-29","Facebook","Sarawak","EM",298,"NEW"],
-["2026-03-29","Facebook","Sarawak","EM",298,"NEW"],
-["2026-03-29","Facebook","Sarawak","EM",550,"NEW"],
-["2026-03-30","Shopee","Johor","WM",206,"NEW"],
-["2026-03-30","Shopee","Johor","WM",431,"NEW"],
-["2026-03-30","Facebook","Kedah","WM",298,"NEW"],
-["2026-03-30","Facebook","Kuala Lumpur","WM",298,"NEW"],
-["2026-03-30","Facebook","Selangor","WM",298,"NEW"],
-["2026-03-30","Facebook","Kuala Lumpur","WM",298,"NEW"],
-["2026-03-30","Facebook","Johor","WM",298,"NEW"],
-["2026-03-30","Facebook","Pahang","WM",399,"REPEAT"],
-["2026-03-30","WhatsApp","Selangor","WM",250,"REPEAT"],
-["2026-03-31","Facebook","Kuala Lumpur","WM",298,"NEW"],
-["2026-04-01","WhatsApp","Kedah","WM",718,"REPEAT"],
-["2026-04-02","Shopee","Kuala Lumpur","WM",298,"NEW"],
-["2026-04-02","Facebook","Penang","WM",298,"NEW"],
-["2026-04-02","Facebook","Selangor","WM",550,"NEW"],
-["2026-04-02","Facebook","Johor","WM",550,"NEW"],
-["2026-04-02","Facebook","Johor","WM",298,"NEW"],
-["2026-04-02","Facebook","Kedah","WM",298,"NEW"],
-["2026-04-03","Facebook","Pahang","WM",550,"NEW"],
-["2026-04-03","Facebook","Johor","WM",550,"NEW"],
-["2026-04-03","WhatsApp","Kedah","WM",550,"NEW"],
-["2026-04-03","WhatsApp","Johor","WM",298,"REPEAT"],
-["2026-04-03","Shopee","Perak","WM",199,"NEW"],
-["2026-04-04","Shopee","Sarawak","EM",298,"NEW"],
-["2026-04-04","Shopee","Kuala Lumpur","WM",550,"NEW"],
-["2026-04-04","Shopee","Selangor","WM",298,"REPEAT"],
-["2026-04-04","Shopee","Sarawak","EM",550,"REPEAT"],
-["2026-04-04","Facebook","Sarawak","EM",550,"NEW"],
-["2026-04-04","Facebook","Sarawak","EM",298,"NEW"],
-["2026-04-04","Shopee","Selangor","WM",298,"NEW"],
-["2026-04-04","Facebook","Johor","WM",298,"NEW"],
-["2026-04-05","Shopee","Kuala Lumpur","WM",298,"NEW"],
-["2026-04-05","Shopee","Melaka","WM",298,"NEW"],
-["2026-04-05","Shopee","Sarawak","EM",550,"NEW"],
-["2026-04-05","Facebook","Sabah","EM",298,"NEW"],
-["2026-04-05","Facebook","Penang","WM",298,"NEW"],
-["2026-04-05","Facebook","Kuala Lumpur","WM",550,"NEW"],
-["2026-04-05","Facebook","Johor","WM",298,"NEW"],
-["2026-04-06","Shopee","Perak","WM",298,"NEW"],
-["2026-04-06","Facebook","Kedah","WM",298,"NEW"],
-["2026-04-06","Facebook","Melaka","WM",298,"NEW"],
-["2026-04-06","Facebook","Johor","WM",298,"NEW"],
-["2026-04-06","Shopee","Johor","WM",336,"NEW"],
-["2026-04-06","Facebook","Kuala Lumpur","WM",298,"NEW"],
-["2026-04-06","Shopee","Selangor","WM",550,"NEW"],
-["2026-04-07","Facebook","Selangor","WM",298,"NEW"],
-["2026-04-07","WhatsApp","Perak","WM",298,"NEW"],
-["2026-04-08","Facebook","Kuala Lumpur","WM",298,"NEW"],
-["2026-04-08","Shopee","Sabah","EM",298,"NEW"],
-["2026-04-08","WhatsApp","Penang","WM",298,"NEW"],
-["2026-04-08","Facebook","Perlis","WM",250,"NEW"],
-["2026-04-08","Facebook","Penang","WM",298,"NEW"],
-["2026-04-08","Shopee","Johor","WM",298,"NEW"],
-["2026-04-09","Shopee","Kedah","WM",298,"NEW"],
-["2026-04-09","Facebook","Melaka","WM",550,"NEW"],
-["2026-04-09","Facebook","Selangor","WM",399,"NEW"],
-["2026-04-10","Facebook","Perak","WM",298,"NEW"],
-["2026-04-10","Facebook","Perak","WM",250,"NEW"],
-["2026-04-11","Facebook","Sarawak","EM",298,"NEW"],
-["2026-04-11","Facebook","Selangor","WM",298,"NEW"],
-["2026-04-11","Shopee","Kedah","WM",298,"NEW"],
-["2026-04-12","Shopee","Penang","WM",298,"NEW"],
-["2026-04-12","Facebook","Perak","WM",399,"REPEAT"],
-["2026-04-12","Facebook","Kuala Lumpur","WM",298,"NEW"],
-["2026-04-12","Facebook","Johor","WM",399,"REPEAT"],
-["2026-04-12","Facebook","Selangor","WM",550,"NEW"],
-["2026-04-13","Shopee","Kuala Lumpur","WM",336,"NEW"],
-["2026-04-13","Facebook","Penang","WM",399,"REPEAT"],
-["2026-04-13","Facebook","Johor","WM",298,"NEW"],
-["2026-04-13","Facebook","Penang","WM",298,"NEW"],
-["2026-04-13","WhatsApp","Sarawak","EM",298,"NEW"],
-["2026-04-13","Facebook","Penang","WM",718,"REPEAT"],
-["2026-04-13","Shopee","Johor","WM",550,"REPEAT"],
-["2026-04-14","Shopee","Sarawak","EM",168,"NEW"],
-["2026-04-14","Facebook","Johor","WM",298,"NEW"],
-["2026-04-14","WhatsApp","Sarawak","EM",298,"NEW"],
-["2026-04-15","Facebook","Sabah","EM",718,"REPEAT"],
-["2026-04-15","Facebook","Negeri Sembilan","WM",399,"REPEAT"],
-["2026-04-15","Shopee","Penang","WM",550,"NEW"],
-["2026-04-15","Facebook","Selangor","WM",550,"NEW"],
-["2026-04-16","Shopee","Penang","WM",298,"NEW"],
-["2026-04-16","Shopee","Kuala Lumpur","WM",550,"NEW"],
-["2026-04-16","Facebook","Selangor","WM",399,"NEW"],
-["2026-04-16","Shopee","Johor","WM",298,"NEW"],
-["2026-04-16","WhatsApp","Selangor","WM",550,"NEW"],
-["2026-04-16","Shopee","Penang","WM",298,"NEW"],
-["2026-04-16","Shopee","Johor","WM",298,"NEW"],
-["2026-04-17","Facebook","Kedah","WM",250,"NEW"],
-["2026-04-17","Facebook","Selangor","WM",298,"NEW"],
-["2026-04-17","Facebook","Pahang","WM",550,"NEW"],
-["2026-04-18","Facebook","Penang","WM",250,"NEW"],
-["2026-04-18","Facebook","Johor","WM",250,"NEW"],
-["2026-04-19","Facebook","Johor","WM",298,"NEW"],
-["2026-04-19","Facebook","Johor","WM",550,"NEW"],
-["2026-04-19","Facebook","Kedah","WM",399,"REPEAT"],
-["2026-04-20","WhatsApp","Selangor","WM",298,"NEW"],
-["2026-04-20","WhatsApp","Selangor","WM",298,"NEW"],
-["2026-04-20","Facebook","Selangor","WM",298,"NEW"],
-["2026-04-20","Phone","Kuala Lumpur","WM",298,"NEW"],
-["2026-04-20","Phone","Kuala Lumpur","WM",298,"NEW"],
-["2026-04-20","Facebook","Perak","WM",298,"REPEAT"],
-["2026-04-20","Facebook","Johor","WM",250,"NEW"],
-["2026-04-21","Facebook","Penang","WM",250,"NEW"],
-["2026-04-21","WhatsApp","Selangor","WM",399,"REPEAT"],
-["2026-04-21","Shopee","Perak","WM",298,"NEW"],
-["2026-04-21","Facebook","Selangor","WM",250,"NEW"],
-["2026-04-21","Facebook","Melaka","WM",298,"NEW"],
-["2026-04-21","Facebook","Sabah","EM",298,"NEW"],
-["2026-04-21","WhatsApp","Sarawak","EM",298,"NEW"],
-["2026-04-21","Facebook","Penang","WM",718,"REPEAT"],
-["2026-04-22","Facebook","Kedah","WM",399,"REPEAT"],
-["2026-04-22","Facebook","Perak","WM",399,"REPEAT"],
-["2026-04-22","Facebook","Penang","WM",250,"NEW"],
-["2026-04-22","Shopee","Johor","WM",550,"NEW"],
-["2026-04-22","Facebook","Selangor","WM",298,"NEW"],
-["2026-04-22","Facebook","Selangor","WM",250,"NEW"],
-["2026-04-22","Facebook","Kedah","WM",550,"REPEAT"],
-["2026-04-23","Facebook","Perak","WM",550,"NEW"],
-["2026-04-23","WhatsApp","Sarawak","EM",250,"NEW"],
-["2026-04-23","Shopee","Pahang","WM",298,"NEW"],
-["2026-04-23","Shopee","Sabah","EM",199,"NEW"],
-["2026-04-24","Facebook","Selangor","WM",298,"NEW"],
-["2026-04-24","WhatsApp","Negeri Sembilan","WM",399,"REPEAT"],
-["2026-04-24","Facebook","Sarawak","EM",550,"NEW"],
-["2026-04-24","WhatsApp","Selangor","WM",298,"NEW"],
-["2026-04-24","Facebook","Kelantan","WM",250,"NEW"],
-["2026-04-25","Shopee","Kedah","WM",196,"REPEAT"],
-["2026-04-25","Facebook","Perak","WM",250,"NEW"],
-["2026-04-25","Shopee","Johor","WM",298,"NEW"],
-["2026-04-25","Facebook","Johor","WM",298,"NEW"],
-["2026-04-26","Shopee","Johor","WM",550,"NEW"],
-["2026-04-26","Shopee","Kuala Lumpur","WM",199,"NEW"],
-["2026-04-26","Shopee","Johor","WM",504,"REPEAT"],
-["2026-04-26","Facebook","Johor","WM",298,"NEW"],
-["2026-04-26","Facebook","Johor","WM",298,"NEW"],
-["2026-04-26","WhatsApp","Sarawak","EM",550,"NEW"],
-["2026-04-26","Facebook","Sarawak","EM",399,"REPEAT"],
-["2026-04-26","Facebook","Kuala Lumpur","WM",298,"NEW"],
-["2026-04-27","Facebook","Kedah","WM",718,"REPEAT"],
-["2026-04-27","Facebook","Selangor","WM",298,"NEW"],
-["2026-04-27","Facebook","Sarawak","EM",718,"REPEAT"],
-["2026-04-27","WhatsApp","Johor","WM",298,"NEW"],
-["2026-04-27","Facebook","Perak","WM",250,"NEW"],
-["2026-04-27","Facebook","Pahang","WM",298,"NEW"],
-["2026-04-27","Facebook","Pahang","WM",298,"NEW"],
-["2026-04-28","WhatsApp","Melaka","WM",550,"NEW"],
-["2026-04-28","Facebook","Kuala Lumpur","WM",298,"NEW"],
-["2026-04-28","Facebook","Kedah","WM",250,"NEW"],
-["2026-04-28","Shopee","Selangor","WM",550,"NEW"],
-["2026-04-28","Facebook","Johor","WM",298,"NEW"],
-["2026-04-28","Facebook","Selangor","WM",298,"NEW"],
-["2026-04-29","Facebook","Selangor","WM",399,"REPEAT"],
-["2026-04-29","Facebook","Kuala Lumpur","WM",399,"REPEAT"],
-["2026-04-29","WhatsApp","Perak","WM",298,"NEW"],
-["2026-04-29","Facebook","Negeri Sembilan","WM",298,"NEW"],
-["2026-04-29","Facebook","Perak","WM",298,"NEW"],
-["2026-04-29","Facebook","Sarawak","EM",298,"NEW"],
-["2026-04-29","WhatsApp","Perak","WM",298,"NEW"],
-["2026-04-29","Facebook","Johor","WM",718,"REPEAT"],
-["2026-04-30","Facebook","Kedah","WM",298,"NEW"],
-["2026-04-30","Facebook","Penang","WM",298,"NEW"],
-["2026-04-30","Shopee","Selangor","WM",298,"NEW"],
-["2026-04-30","Facebook","Johor","WM",298,"NEW"],
-["2026-05-01","Facebook","Johor","WM",399,"REPEAT"],
-["2026-05-01","Facebook","Sabah","EM",550,"NEW"],
-["2026-05-01","Facebook","Sabah","EM",398,"NEW"],
-["2026-05-01","Facebook","Kelantan","WM",298,"NEW"],
-["2026-05-01","Facebook","Penang","WM",250,"NEW"],
-["2026-05-01","Facebook","Kuala Lumpur","WM",550,"NEW"],
-["2026-05-01","Facebook","Negeri Sembilan","WM",550,"NEW"],
-["2026-05-01","Facebook","Johor","WM",718,"REPEAT"],
-["2026-05-02","Facebook","Pahang","WM",250,"REPEAT"],
-["2026-05-02","Facebook","Sabah","EM",718,"REPEAT"],
-["2026-05-02","Facebook","Johor","WM",550,"NEW"],
-["2026-05-02","Facebook","Kuala Lumpur","WM",298,"NEW"],
-["2026-05-02","Facebook","Penang","WM",250,"NEW"],
-["2026-05-02","WhatsApp","Selangor","WM",300,"NEW"],
-["2026-05-02","WhatsApp","Selangor","WM",298,"NEW"],
-["2026-05-03","Facebook","Sabah","EM",399,"REPEAT"],
-["2026-05-03","Facebook","Penang","WM",550,"NEW"],
-["2026-05-03","Facebook","Johor","WM",199,"NEW"],
-["2026-05-03","Facebook","Selangor","WM",298,"NEW"],
-["2026-05-03","Facebook","Johor","WM",550,"NEW"],
-["2026-05-03","Shopee","Perak","WM",298,"NEW"],
-["2026-05-03","Shopee","Penang","WM",298,"NEW"],
-["2026-05-03","Shopee","Johor","WM",298,"NEW"],
-["2026-05-03","Shopee","Selangor","WM",500,"REPEAT"],
-["2026-05-04","Shopee","Kuala Lumpur","WM",550,"NEW"],
-["2026-05-04","Shopee","Selangor","WM",250,"NEW"],
-["2026-05-04","Shopee","Penang","WM",298,"NEW"],
-["2026-05-04","WhatsApp","Selangor","WM",298,"NEW"],
-["2026-05-04","Shopee","Penang","WM",399,"REPEAT"],
-["2026-05-04","Facebook","Kuala Lumpur","WM",550,"NEW"],
-["2026-05-04","Facebook","Johor","WM",550,"NEW"],
-["2026-05-04","Facebook","Kuala Lumpur","WM",550,"NEW"],
-["2026-05-04","Facebook","Selangor","WM",298,"NEW"],
-["2026-05-04","Facebook","Selangor","WM",298,"NEW"],
-["2026-05-05","Facebook","Perak","WM",550,"NEW"],
-["2026-05-05","Shopee","Perak","WM",550,"NEW"],
-["2026-05-05","Facebook","Selangor","WM",550,"REPEAT"],
-["2026-05-05","WhatsApp","Penang","WM",550,"REPEAT"],
-["2026-05-05","Shopee","Kuala Lumpur","WM",550,"NEW"],
-["2026-05-05","Shopee","Kuala Lumpur","WM",298,"NEW"],
-["2026-05-05","Shopee","Selangor","WM",298,"NEW"],
-["2026-05-05","Shopee","Johor","WM",550,"REPEAT"],
-["2026-05-05","Shopee","Selangor","WM",399,"REPEAT"],
-["2026-05-05","Shopee","Johor","WM",250,"NEW"],
-["2026-05-05","Facebook","Kuala Lumpur","WM",298,"NEW"],
-["2026-05-05","Shopee","Sarawak","EM",298,"NEW"],
-["2026-05-05","WhatsApp","Johor","WM",336,"REPEAT"],
-["2026-05-05","Facebook","Perak","WM",250,"NEW"],
-["2026-05-05","Shopee","Pahang","WM",250,"REPEAT"],
-["2026-05-05","Shopee","Penang","WM",298,"NEW"],
-["2026-05-05","Shopee","Sarawak","EM",298,"NEW"],
-["2026-05-05","Facebook","Penang","WM",550,"NEW"],
-["2026-05-05","Facebook","Penang","WM",399,"REPEAT"],
-["2026-05-05","Facebook","Penang","WM",250,"NEW"],
-["2026-05-05","Facebook","Melaka","WM",550,"NEW"],
-["2026-05-05","Shopee","Selangor","WM",550,"REPEAT"],
-["2026-05-06","Facebook","Selangor","WM",550,"NEW"],
-["2026-05-06","Facebook","Perak","WM",550,"NEW"],
-["2026-05-06","Shopee","Kuala Lumpur","WM",298,"NEW"],
-["2026-05-06","Shopee","Kuala Lumpur","WM",550,"NEW"],
-["2026-05-06","WhatsApp","Selangor","WM",550,"NEW"],
-["2026-05-06","Shopee","Selangor","WM",298,"NEW"],
-["2026-05-06","Shopee","Sarawak","EM",1100,"REPEAT"],
-["2026-05-06","Shopee","Selangor","WM",550,"NEW"],
-["2026-05-06","Shopee","Johor","WM",550,"NEW"],
-["2026-05-06","Shopee","Johor","WM",298,"NEW"],
-["2026-05-06","Shopee","Johor","WM",298,"NEW"],
-["2026-05-06","WhatsApp","Perlis","WM",718,"REPEAT"],
-["2026-05-07","Shopee","Selangor","WM",550,"NEW"],
-["2026-05-07","Facebook","Negeri Sembilan","WM",550,"NEW"],
-["2026-05-07","Facebook","Penang","WM",250,"NEW"],
-["2026-05-07","Facebook","Perak","WM",399,"REPEAT"],
-["2026-05-07","Facebook","Penang","WM",399,"REPEAT"],
-["2026-05-07","Facebook","Johor","WM",550,"NEW"],
-["2026-05-07","Facebook","Penang","WM",250,"NEW"],
-["2026-05-07","Facebook","Perak","WM",550,"NEW"],
-["2026-05-07","Facebook","Penang","WM",298,"NEW"],
-["2026-05-07","Facebook","Sarawak","EM",550,"NEW"],
-["2026-05-07","Facebook","Johor","WM",298,"NEW"],
-["2026-05-08","Facebook","Johor","WM",298,"NEW"],
-["2026-05-08","Facebook","Penang","WM",298,"NEW"],
-["2026-05-08","Shopee","Selangor","WM",298,"NEW"],
-["2026-05-08","Facebook","Perak","WM",550,"NEW"],
-["2026-05-08","Facebook","Kuala Lumpur","WM",298,"NEW"],
-["2026-05-08","WhatsApp","Penang","WM",399,"NEW"],
-["2026-05-08","Facebook","Johor","WM",718,"REPEAT"],
-["2026-05-08","Shopee","Kuala Lumpur","WM",298,"NEW"],
-["2026-05-09","Facebook","Penang","WM",298,"NEW"],
-["2026-05-09","Aftersales","Pahang","WM",399,"REPEAT"],
-["2026-05-09","Facebook","Perak","WM",298,"NEW"],
-["2026-05-09","Facebook","Kuala Lumpur","WM",298,"NEW"],
-["2026-05-09","Facebook","Kuala Lumpur","WM",250,"NEW"],
-["2026-05-09","Facebook","Sarawak","EM",550,"NEW"],
-["2026-05-09","Facebook","Negeri Sembilan","WM",298,"NEW"],
-["2026-05-09","Phone","Selangor","WM",298,"NEW"],
-["2026-05-10","Facebook","Perak","WM",550,"NEW"],
-["2026-05-10","Shopee","Negeri Sembilan","WM",250,"NEW"],
-["2026-05-10","Facebook","Selangor","WM",550,"NEW"],
-["2026-05-10","Facebook","Selangor","WM",550,"NEW"],
-["2026-05-10","WhatsApp","Selangor","WM",250,"NEW"],
-["2026-05-10","Facebook","Penang","WM",298,"NEW"],
-["2026-05-10","Shopee","Selangor","WM",250,"NEW"],
-["2026-05-10","Shopee","Melaka","WM",250,"NEW"],
-["2026-05-10","Facebook","Kuala Lumpur","WM",250,"NEW"],
-["2026-05-10","WhatsApp","Penang","WM",298,"NEW"],
-["2026-05-11","Facebook","Johor","WM",298,"NEW"],
-["2026-05-11","Facebook","Johor","WM",298,"NEW"],
-["2026-05-11","WhatsApp","Sarawak","EM",336,"REPEAT"],
-["2026-05-11","Facebook","Johor","WM",550,"NEW"],
-["2026-05-11","Facebook","Pahang","WM",298,"NEW"],
-["2026-05-11","Shopee","Sarawak","EM",298,"NEW"],
-["2026-05-11","Shopee","Negeri Sembilan","WM",298,"NEW"],
-["2026-05-11","Shopee","Johor","WM",550,"NEW"],
-["2026-05-11","Shopee","Kedah","WM",250,"NEW"],
-["2026-05-11","WhatsApp","Sarawak","EM",298,"NEW"],
-["2026-05-11","Facebook","Negeri Sembilan","WM",550,"NEW"],
-["2026-05-12","WhatsApp","Kedah","WM",298,"NEW"],
-["2026-05-12","Facebook","Perak","WM",718,"REPEAT"],
-["2026-05-12","Facebook","Johor","WM",298,"NEW"],
-["2026-05-12","Facebook","Selangor","WM",250,"NEW"],
-["2026-05-12","Facebook","Selangor","WM",250,"REPEAT"],
-["2026-05-12","Facebook","Selangor","WM",399,"REPEAT"],
-["2026-05-12","Shopee","Johor","WM",250,"NEW"],
-["2026-05-12","Facebook","Johor","WM",500,"NEW"],
-["2026-05-13","Facebook","Selangor","WM",298,"NEW"],
-["2026-05-13","Facebook","Johor","WM",298,"NEW"],
-["2026-05-13","Facebook","Melaka","WM",298,"NEW"],
-["2026-05-13","Facebook","Penang","WM",298,"NEW"],
-["2026-05-13","WhatsApp","Negeri Sembilan","WM",718,"REPEAT"],
-["2026-05-13","Facebook","Johor","WM",298,"NEW"],
-["2026-05-13","Facebook","Sarawak","EM",550,"NEW"],
-["2026-05-13","Facebook","Perak","WM",298,"NEW"],
-["2026-05-13","Facebook","Johor","WM",718,"REPEAT"],
-["2026-05-13","WhatsApp","Johor","WM",298,"NEW"],
-["2026-05-14","Facebook","Selangor","WM",250,"NEW"],
-["2026-05-14","Facebook","Kuala Lumpur","WM",718,"REPEAT"],
-["2026-05-14","Facebook","Selangor","WM",250,"NEW"],
-["2026-05-14","Facebook","Perak","WM",550,"NEW"],
-["2026-05-14","Facebook","Kuala Lumpur","WM",199,"NEW"],
-["2026-05-14","Facebook","Johor","WM",399,"REPEAT"],
-["2026-05-14","Facebook","Johor","WM",550,"NEW"],
-["2026-05-14","Shopee","Selangor","WM",298,"NEW"],
-["2026-05-14","Facebook","Johor","WM",550,"NEW"],
-["2026-05-15","Facebook","Penang","WM",298,"NEW"],
-["2026-05-15","WhatsApp","Kedah","WM",298,"NEW"],
-["2026-05-15","WhatsApp","Perak","WM",550,"NEW"],
-["2026-05-15","Facebook","Penang","WM",298,"NEW"],
-["2026-05-15","Facebook","Selangor","WM",298,"NEW"],
-["2026-05-15","Facebook","Johor","WM",298,"NEW"],
-["2026-05-16","Shopee","Selangor","WM",550,"NEW"],
-["2026-05-16","Facebook","Perak","WM",550,"NEW"],
-["2026-05-16","WhatsApp","Perak","WM",550,"NEW"],
-["2026-05-16","Facebook","Penang","WM",298,"NEW"],
-["2026-05-16","Facebook","Kuala Lumpur","WM",399,"REPEAT"],
-["2026-05-16","Facebook","Johor","WM",298,"NEW"],
-["2026-05-16","Facebook","Johor","WM",298,"NEW"],
-["2026-05-17","Facebook","Kuala Lumpur","WM",250,"NEW"],
-["2026-05-17","Facebook","Sarawak","EM",298,"NEW"],
-["2026-05-17","Facebook","Penang","WM",399,"REPEAT"],
-["2026-05-18","Facebook","Johor","WM",550,"REPEAT"],
-["2026-05-18","Facebook","Negeri Sembilan","WM",250,"NEW"],
-["2026-05-18","Facebook","Pahang","WM",1150,"REPEAT"],
-["2026-05-18","Facebook","Johor","WM",298,"NEW"],
-["2026-05-18","Facebook","Negeri Sembilan","WM",550,"NEW"],
-["2026-05-18","WhatsApp","Penang","WM",298,"NEW"],
-["2026-05-18","Shopee","Johor","WM",298,"NEW"],
-["2026-05-18","WhatsApp","Selangor","WM",718,"REPEAT"],
-["2026-05-18","Facebook","Penang","WM",298,"NEW"],
-["2026-05-18","Facebook","Pahang","WM",298,"NEW"],
-["2026-05-18","Shopee","Selangor","WM",250,"NEW"],
-["2026-05-18","Aftersales","Sabah","EM",718,"REPEAT"],
-["2026-05-18","Facebook","Selangor","WM",250,"NEW"],
-["2026-05-19","Facebook","Sabah","EM",298,"NEW"],
-["2026-05-19","WhatsApp","Perak","WM",550,"NEW"],
-["2026-05-19","WhatsApp","Johor","WM",298,"NEW"],
-["2026-05-19","Facebook","Penang","WM",550,"NEW"],
-["2026-05-19","Facebook","Johor","WM",250,"NEW"],
-["2026-05-19","Shopee","Perak","WM",399,"REPEAT"],
-["2026-05-19","Shopee","Sabah","EM",298,"NEW"],
-["2026-05-19","Facebook","Kuala Lumpur","WM",500,"NEW"],
-["2026-05-19","Facebook","Johor","WM",718,"REPEAT"],
-["2026-05-19","Facebook","Selangor","WM",250,"NEW"],
-["2026-05-19","Facebook","Selangor","WM",298,"NEW"],
-["2026-05-19","Facebook","Selangor","WM",298,"REPEAT"],
-["2026-05-20","Facebook","Kelantan","WM",298,"NEW"],
-["2026-05-20","Facebook","Johor","WM",298,"NEW"],
-["2026-05-20","Facebook","Johor","WM",250,"NEW"],
-["2026-05-20","Facebook","Selangor","WM",550,"NEW"],
-["2026-05-20","Facebook","Selangor","WM",550,"NEW"],
-["2026-05-20","Facebook","Penang","WM",298,"NEW"],
-["2026-05-20","WhatsApp","Kedah","WM",399,"REPEAT"],
-["2026-05-20","Facebook","Kuala Lumpur","WM",550,"NEW"],
-["2026-05-21","WhatsApp","Selangor","WM",298,"NEW"],
-["2026-05-21","Facebook","Johor","WM",298,"NEW"],
-["2026-05-21","Facebook","Selangor","WM",298,"NEW"],
-["2026-05-21","WhatsApp","Selangor","WM",550,"NEW"],
-["2026-05-21","Shopee","Kelantan","WM",298,"REPEAT"],
-["2026-05-21","WhatsApp","Perak","WM",298,"NEW"],
-["2026-05-21","Facebook","Sabah","EM",250,"NEW"],
-["2026-05-22","Shopee","Selangor","WM",718,"REPEAT"],
-["2026-05-22","Facebook","Selangor","WM",550,"NEW"],
-["2026-05-22","Facebook","Johor","WM",298,"NEW"],
-["2026-05-22","Facebook","Negeri Sembilan","WM",550,"NEW"],
-["2026-05-22","Facebook","Johor","WM",298,"NEW"],
-["2026-05-22","Shopee","Selangor","WM",298,"NEW"],
-["2026-05-22","Shopee","Johor","WM",718,"REPEAT"],
-["2026-05-23","Facebook","Kedah","WM",298,"NEW"],
-["2026-05-23","Facebook","Johor","WM",250,"NEW"],
-["2026-05-23","Facebook","Selangor","WM",399,"REPEAT"],
-["2026-05-23","Facebook","Kuala Lumpur","WM",250,"NEW"],
-["2026-05-23","Shopee","Kuala Lumpur","WM",298,"NEW"],
-["2026-05-24","Facebook","Johor","WM",298,"NEW"],
-["2026-05-24","Facebook","Penang","WM",250,"NEW"],
-["2026-05-24","Facebook","Selangor","WM",550,"NEW"],
-["2026-05-24","WhatsApp","Selangor","WM",718,"NEW"],
-["2026-05-24","Facebook","Penang","WM",298,"NEW"],
-["2026-05-24","Facebook","Selangor","WM",718,"NEW"],
-["2026-05-25","Shopee","Sarawak","EM",298,"NEW"],
-["2026-05-25","Facebook","Perak","WM",550,"NEW"],
-["2026-05-25","Facebook","Kuala Lumpur","WM",550,"NEW"],
-["2026-05-25","Facebook","Sabah","EM",250,"NEW"],
-["2026-05-25","Shopee","Johor","WM",298,"NEW"],
-["2026-05-25","Shopee","Negeri Sembilan","WM",597,"NEW"],
-["2026-05-25","Shopee","Pahang","WM",298,"NEW"],
-["2026-05-25","Facebook","Selangor","WM",550,"NEW"],
-["2026-05-25","Facebook","Johor","WM",229,"NEW"],
-["2026-05-25","Facebook","Selangor","WM",298,"NEW"],
-["2026-05-26","Facebook","Johor","WM",336,"NEW"],
-["2026-05-26","Facebook","Johor","WM",600,"NEW"],
-["2026-05-26","Shopee","Kuala Lumpur","WM",338,"NEW"],
-["2026-05-26","WhatsApp","Kuala Lumpur","WM",298,"NEW"],
-["2026-05-26","Shopee","Penang","WM",250,"NEW"],
-["2026-05-26","Shopee","Pahang","WM",250,"NEW"],
-["2026-05-27","Shopee","Kuala Lumpur","WM",298,"NEW"],
-["2026-05-27","Facebook","Sarawak","EM",168,"NEW"],
-["2026-05-27","Facebook","Johor","WM",718,"REPEAT"],
-["2026-05-27","Facebook","Sarawak","EM",250,"NEW"],
-["2026-05-27","WhatsApp","Negeri Sembilan","WM",298,"NEW"],
-["2026-05-27","Shopee","Johor","WM",250,"NEW"],
-["2026-05-27","Facebook","Kuala Lumpur","WM",718,"NEW"],
-["2026-05-27","Facebook","Penang","WM",500,"NEW"],
-["2026-05-27","Facebook","Penang","WM",250,"NEW"],
-["2026-05-27","WhatsApp","Penang","WM",250,"REPEAT"],
-["2026-05-28","WhatsApp","Perak","WM",298,"NEW"],
-["2026-05-28","WhatsApp","Selangor","WM",298,"NEW"],
-["2026-05-28","Facebook","Penang","WM",718,"REPEAT"],
-["2026-05-28","Facebook","Kedah","WM",580,"NEW"],
-["2026-05-28","Facebook","Penang","WM",399,"REPEAT"],
-["2026-05-28","Facebook","Sarawak","EM",298,"NEW"],
-["2026-05-28","Facebook","Selangor","WM",298,"NEW"],
-["2026-05-28","Shopee","Perak","WM",298,"NEW"],
-["2026-05-28","Facebook","Perak","WM",550,"NEW"],
-["2026-05-28","Facebook","Pahang","WM",250,"NEW"],
-["2026-05-29","Facebook","Penang","WM",550,"NEW"],
-["2026-05-29","Facebook","Perak","WM",298,"NEW"],
-["2026-05-29","WhatsApp","Kedah","WM",500,"NEW"],
-["2026-05-29","Facebook","Selangor","WM",298,"NEW"],
-["2026-05-29","Facebook","Selangor","WM",318,"NEW"],
-["2026-05-29","Facebook","Penang","WM",550,"NEW"],
-["2026-05-29","Facebook","Johor","WM",250,"NEW"],
-["2026-05-30","Facebook","Perak","WM",298,"NEW"],
-["2026-05-30","Shopee","Penang","WM",250,"NEW"],
-["2026-05-30","WhatsApp","Melaka","WM",298,"NEW"],
-["2026-05-31","Facebook","Perak","WM",250,"NEW"],
-["2026-05-31","Facebook","Penang","WM",298,"NEW"],
-["2026-06-01","Shopee","Selangor","WM",318,"NEW"],
-["2026-06-01","Shopee","Johor","WM",318,"NEW"],
-["2026-06-01","Facebook","Johor","WM",550,"REPEAT"],
-["2026-06-01","Facebook","Perak","WM",250,"NEW"],
-["2026-06-01","Facebook","Selangor","WM",298,"NEW"],
-["2026-06-01","Facebook","Sarawak","EM",1000,"NEW"],
-["2026-06-01","Facebook","Melaka","WM",250,"NEW"],
-["2026-06-02","Shopee","Johor","WM",318,"NEW"],
-["2026-06-02","Facebook","Negeri Sembilan","WM",718,"REPEAT"],
-["2026-06-02","Facebook","Penang","WM",550,"NEW"],
-["2026-06-02","Facebook","Kedah","WM",298,"NEW"],
-["2026-06-02","WhatsApp","Kuala Lumpur","WM",298,"NEW"],
-["2026-06-02","Facebook","Selangor","WM",298,"NEW"],
-["2026-06-02","Facebook","Melaka","WM",718,"REPEAT"],
-["2026-06-02","Facebook","Penang","WM",298,"NEW"],
-["2026-06-02","Facebook","Kedah","WM",399,"REPEAT"],
-["2026-06-03","Facebook","Johor","WM",298,"NEW"],
-["2026-06-03","Facebook","Selangor","WM",298,"NEW"],
-["2026-06-03","Facebook","Pahang","WM",399,"REPEAT"],
-["2026-06-03","Shopee","Selangor","WM",298,"NEW"],
-["2026-06-03","WhatsApp","Kuala Lumpur","WM",718,"NEW"],
-["2026-06-03","Facebook","Selangor","WM",399,"REPEAT"],
-["2026-06-03","Shopee","Johor","WM",580,"NEW"],
-["2026-06-03","WhatsApp","Selangor","WM",718,"REPEAT"],
-["2026-06-03","Facebook","Selangor","WM",250,"NEW"],
-["2026-06-03","WhatsApp","Perak","WM",550,"NEW"],
-["2026-06-03","Shopee","Johor","WM",209,"NEW"],
-];
+// ⚠️ 极其重要：把这里的链接换成你从 Google Sheets 发布的 CSV 链接！
+const ORDERS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSm0KUChpHKrOj8ljJ7uEf4YItMe8gADvlsWpmdFAR_vTDy42dxKdBfZ7CbjJEqPpbHlXBFrgOrU2pE/pub?output=csv"; 
+const ADS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4LW7fng5FOPnXX76HK945G7NKQUJsb_SDkfSGc2QIDLAx_BjJQwsZE78tW6gwLvGFT7CqNrFPA-1f/pub?output=csv";
 
-const ADS_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vR4LW7fng5FOPnXX76HK945G7NKQUJsb_SDkfSGc2QIDLAx_BjJQwsZE78tW6gwLvGFT7CqNrFPA-1f/pub?output=csv";
-const GOAL=150000;
-const TODAY="2026-06-03";
+const GOAL = 150000;
+const TODAY = new Date().toISOString().slice(0,10); // 自动获取今天日期
 
 const rm=(n,d=0)=>"RM "+(+n||0).toFixed(d).replace(/\B(?=(\d{3})+(?!\d))/g,",");
 const fN=n=>(+n||0).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,",");
@@ -893,14 +203,17 @@ const rc=r=>r>=3?"var(--gr)":r>=2?"var(--am)":"var(--re)";
 function getR(f){
   const ymd=s=>{const d=new Date(s);return d.toISOString().slice(0,10)};
   const sub=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()-n);return ymd(x)};
+  const d=new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0');
   switch(f){
     case'today': return{s:TODAY,e:TODAY};
     case'yesterday': return{s:sub(TODAY,1),e:sub(TODAY,1)};
     case'7d': return{s:sub(TODAY,6),e:TODAY};
-    case'thisMonth': return{s:'2026-06-01',e:TODAY};
-    case'lastMonth': return{s:'2026-05-01',e:'2026-05-31'};
-    case'quarter': return{s:'2026-04-01',e:TODAY};
-    case'all': return{s:'2026-03-01',e:TODAY};
+    case'thisMonth': return{s:`${y}-${m}-01`,e:TODAY};
+    case'lastMonth': 
+        const lm=new Date(y,d.getMonth()-1,1); const lme=new Date(y,d.getMonth(),0);
+        return{s:ymd(lm),e:ymd(lme)};
+    case'quarter': return{s:`${y}-01-01`,e:TODAY}; // 简化季度为今年至今
+    case'all': return{s:'2026-01-01',e:TODAY};
     default: return{s:$('ds').value,e:$('de').value};
   }
 }
@@ -910,7 +223,7 @@ function setF(f){
   const btns=document.querySelectorAll('.fb');
   if(map[f]!=null)btns[map[f]].classList.add('a');
   const r=getR(f);$('ds').value=r.s;$('de').value=r.e;
-  build(r.s,r.e);
+  if(D.length > 0) build(r.s,r.e);
 }
 function applyCustom(){document.querySelectorAll('.fb').forEach(b=>b.classList.remove('a'));build($('ds').value,$('de').value)}
 function fmtR(s,e){
@@ -954,20 +267,17 @@ function build(s,e){
   const conv=g.tM>0?g.tO/g.tM*100:0;
   const cac=g.nO>0?g.tSp/g.nO:0;
 
-  // Gauge
   const cv=$('gc'),ctx=cv.getContext('2d');
-  // ESOM: actual MTD vs goal
   const mtdPct=Math.min(Math.round(g.tS/GOAL*100),100);
   set('ep',mtdPct+'%');set('ea',rm(g.tS,0));
   set('es','预测月底: '+rm(g.esom,0));
-  // Redraw gauge with actual/goal
   ctx.clearRect(0,0,88,88);
   ctx.beginPath();ctx.arc(44,44,36,Math.PI*.7,Math.PI*2.3);ctx.strokeStyle='#21262d';ctx.lineWidth=6;ctx.lineCap='round';ctx.stroke();
   if(mtdPct>0){ctx.beginPath();ctx.arc(44,44,36,Math.PI*.7,Math.PI*(.7+1.6*Math.min(mtdPct/100,1)));ctx.strokeStyle=mtdPct>=100?'#3fb950':mtdPct>=60?'#2ea9a9':'#d29922';ctx.lineWidth=6;ctx.lineCap='round';ctx.stroke();}
   const rv=$('rv');rv.textContent=roas.toFixed(2)+'x';rv.style.color=rc(roas);
 
   set('kSales',rm(g.tS,0));set('kOrd',fN(g.tO)+' 单');
-  set('kSpend',rm(g.tSp*1.16,0));  // display after SST
+  set('kSpend',rm(g.tSp*1.16,0)); 
   set('kSpendSub','原 '+rm(g.tSp,0));
   set('kConv',conv.toFixed(1)+'%');set('kMsg',fN(g.tO)+'÷'+fN(g.tM)+' 条');
   set('kAov',rm(aov,0));
@@ -980,7 +290,6 @@ function build(s,e){
   set('sumNP',g.tO>0?(g.nO/g.tO*100).toFixed(0)+'%':'—');
   set('sumRP',g.tO>0?(g.rO/g.tO*100).toFixed(0)+'%':'—');
 
-  // Chart
   if(chart)chart.destroy();
   const lbl=g.rows.map(r=>r[0].slice(5).replace('-','/'));
   const sales=g.rows.map(r=>r[1]);
@@ -1002,7 +311,6 @@ function build(s,e){
       }}
   });
 
-  // Channel & State (Jun only)
   if(g.hasJ){
     $('chanCard').style.display='';$('stateCard').style.display='';
     const em=['🥇','🥈','🥉'];
@@ -1016,52 +324,104 @@ function build(s,e){
   }
 }
 
+// 🌐 终极双擎同步：自动抓取并合并 订单 和 广告
 async function doSync(){
-  const dot=$('dot');dot.className='dot sp';set('st','更新中...');
-  try{
-    const r=await fetch(ADS_URL+'&t='+Date.now());
-    const txt=await r.text();
-    const lines=txt.trim().split('\n').slice(1);
-    let updated=0;
+  const dot=$('dot');dot.className='dot sp';set('st','下载数据中...');
+  
+  if(ORDERS_CSV_URL.includes('替换') || ADS_CSV_URL.includes('替换')){
+      alert("请先在代码里贴上你的真实 CSV 链接！");
+      dot.className='dot';set('st','⚠ 缺少链接');
+      return;
+  }
 
-    lines.forEach(line=>{
-      // 高级 CSV 解析（防止逗号切错位）
+  try{
+    // 同时从两个 Google Sheets 抓取数据
+    const [resOrd, resAds] = await Promise.all([
+      fetch(ORDERS_CSV_URL + '&t=' + Date.now()),
+      fetch(ADS_CSV_URL + '&t=' + Date.now())
+    ]);
+
+    const txtOrd = await resOrd.text();
+    const txtAds = await resAds.text();
+
+    // 每次同步前清空旧数据，保证永远是最新 Live 状态！
+    D.length = 0; 
+    JO.length = 0;
+    
+    // 🛠️ 解析 1：订单表 (生成 JO 排名 和 每日销售额)
+    const linesO = txtOrd.trim().split('\n').slice(1);
+    linesO.forEach(line => {
       const c = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/(^"|"$)/g, '').trim());
+      if(c.length < 5) return;
       
-      // 因为你的表格里消息数在 c[4]，所以需要保证这行至少有 5 个格子
-      if(c.length < 5) return; 
-      
-      const date = c[0]; 
+      const date = c[0]; // 日期
       if(!date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
 
-      // 根据你最原始的代码逻辑：c[1] + c[2] 是总广告费，c[4] 是消息数
-      const sp = (parseFloat(c[1]?.replace(/,/g,'')) || 0) + (parseFloat(c[2]?.replace(/,/g,'')) || 0);
-      const msg = parseInt(c[4]?.replace(/,/g,'')) || 0;
+      const sales = parseFloat(c[1]?.replace(/,/g,'')) || 0; // 金额 (假定在第2列，请根据你的表头调整下标)
+      const type = c[2]?.toUpperCase(); // NEW 或 REPEAT (假定在第3列)
+      const channel = c[3] || 'Other'; // 渠道 (假定在第4列)
+      const state = c[4] || 'Other'; // 州 (假定在第5列)
+      const region = c[5] || 'WM'; // 区域 (假定在第6列)
 
-      if(sp > 0 || msg > 0) {
-        const i = D.findIndex(x => x[0] === date);
-        if(i >= 0) {
-          // 如果日期已经存在，则覆盖更新旧日期的广告费和消息数
-          D[i][2] = sp;
-          D[i][3] = msg;
-        } else {
-          // 🚀 最关键的一步：如果是全新的一天，自动将其新增进大盘中 (销售额先默认为 0)
-          D.push([date, 0, sp, msg, 0, 0, 0, 0]);
-        }
-        updated++;
+      // 录入单笔订单，用来做排行榜
+      JO.push([date, channel, state, region, sales, type]);
+
+      // 汇总到每日大盘
+      let i = D.findIndex(x => x[0] === date);
+      if(i < 0) {
+        D.push([date, 0, 0, 0, 0, 0, 0, 0]); // [日期, 销售额, 广告费, 消息, 新客单, 老客单, 新销售, 老销售]
+        i = D.length - 1;
+      }
+      D[i][1] += sales; // 累计每日总销售额
+      if(type === 'NEW' || type === '新客') { 
+          D[i][4]++; // 新客单数 +1
+          D[i][6] += sales; // 新客金额累加
+      } else { 
+          D[i][5]++; // 老客单数 +1
+          D[i][7] += sales; // 老客金额累加
       }
     });
 
+    // 🛠️ 解析 2：广告表 (生成 广告费 和 消息数)
+    const linesA = txtAds.trim().split('\n').slice(1);
+    linesA.forEach(line => {
+      const c = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/(^"|"$)/g, '').trim());
+      if(c.length < 3) return;
+      
+      const date = c[0];
+      if(!date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
+
+      // 假设你的广告表：第2列和第3列加起来是总花费，第5列是消息数
+      const spend = (parseFloat(c[1]?.replace(/,/g,'')) || 0) + (parseFloat(c[2]?.replace(/,/g,'')) || 0);
+      const msg = parseInt(c[4]?.replace(/,/g,'')) || 0;
+
+      let i = D.findIndex(x => x[0] === date);
+      if(i < 0) {
+        D.push([date, 0, 0, 0, 0, 0, 0, 0]);
+        i = D.length - 1;
+      }
+      D[i][2] += spend; // 注入当天的广告费
+      D[i][3] += msg; // 注入当天的消息数
+    });
+
+    // 按日期重新排序一下大盘数据
+    D.sort((a,b) => a[0].localeCompare(b[0]));
+
     dot.className='dot';
-    set('st',`✓ ${new Date().toLocaleTimeString('zh-MY',{hour:'2-digit',minute:'2-digit'})} · 已同步 ${updated} 天数据`);
+    set('st',`✓ ${new Date().toLocaleTimeString('zh-MY',{hour:'2-digit',minute:'2-digit'})} · 数据全自动拼装完成！`);
+    
+    // 渲染画面
+    setF('thisMonth'); // 默认显示本月
   }catch(e){
     console.error("同步失败:", e);
-    dot.className='dot';set('st','⚠ 数据读取失败，请检查链接');
+    dot.className='dot';set('st','⚠ 读取失败，请检查 CSV 链接是否公开');
   }
-  
-  const s=$('ds').value, en=$('de').value;
-  build(s,en);
 }
+
+// 页面加载完成后，自动触发一次同步！
+window.onload = () => {
+    doSync();
+};
 </script>
 </body>
 </html>
