@@ -1026,29 +1026,62 @@ function build(s,e){
 async function doSync(){
   const dot=$('dot');dot.className='dot sp';set('st','更新中...');
   try{
+    // 强制加时间戳，防止浏览器偷懒读旧缓存
     const r=await fetch(ADS_URL+'&t='+Date.now());
     const txt=await r.text();
+    
+    // 按行切分数据
     const lines=txt.trim().split('\n').slice(1);
     let updated=0;
-    lines.forEach(line=>{
-      const c=line.split(',');
-      if(c.length<5)return;
-      const date=c[0].trim().replace(/"/g,'');
-      if(!date.match(/^\d{4}-\d{2}-\d{2}$/))return;
-      const sp=(parseFloat(c[1])||0)+(parseFloat(c[2])||0);
-      const msg=parseInt(c[4])||0;
-      const i=D.findIndex(x=>x[0]===date);
-      if(i>=0&&sp>0){D[i][2]=sp;D[i][3]=msg;updated++;}
-    });
-    dot.className='dot';
-    set('st',`✓ ${new Date().toLocaleTimeString('zh-MY',{hour:'2-digit',minute:'2-digit'})} · ${updated}天更新`);
-  }catch(e){
-    dot.className='dot';set('st','⚠ 广告同步失败');
-  }
-  const s=$('ds').value,en=$('de').value;build(s,en);
-}
 
-setF('thisMonth');
+    lines.forEach(line=>{
+      // 🌟 高级 CSV 破解法：防止数字里的逗号（如 "1,200"）打断代码
+      const c = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/(^"|"$)/g, '').trim());
+      
+      if(c.length < 2) return; // 空行直接跳过
+      
+      const date = c[0]; 
+      if(!date.match(/^\d{4}-\d{2}-\d{2}$/)) return; // 确保日期格式是 2026-06-04
+
+      // 提取你的表格数据（自动去掉数字里的逗号和符号）
+      const sales = parseFloat(c[1]?.replace(/,/g,'')) || 0;
+      const spend = parseFloat(c[2]?.replace(/,/g,'')) || 0;
+      const msg = parseInt(c[3]?.replace(/,/g,'')) || 0;
+      const newO = parseInt(c[4]?.replace(/,/g,'')) || 0;
+      const repO = parseInt(c[5]?.replace(/,/g,'')) || 0;
+      const newS = parseFloat(c[6]?.replace(/,/g,'')) || 0;
+      const repS = parseFloat(c[7]?.replace(/,/g,'')) || 0;
+
+      // 核心逻辑：在原本的图表数据(D)里找，今天的数据有了没？
+      const i = D.findIndex(x => x[0] === date);
+      
+      if(i >= 0) {
+        // 如果有了，就用 Google Sheets 的最新数据【覆盖】它
+        if(sales > 0) D[i][1] = sales;
+        if(spend > 0) D[i][2] = spend;
+        if(msg > 0) D[i][3] = msg;
+        if(newO > 0) D[i][4] = newO;
+        if(repO > 0) D[i][5] = repO;
+        if(newS > 0) D[i][6] = newS;
+        if(repS > 0) D[i][7] = repS;
+      } else {
+        // 如果是新的一天，就【新增】进大盘里
+        D.push([date, sales, spend, msg, newO, repO, newS, repS]);
+      }
+      updated++;
+    });
+
+    dot.className='dot';
+    set('st',`✓ ${new Date().toLocaleTimeString('zh-MY',{hour:'2-digit',minute:'2-digit'})} · 已同步 ${updated} 行数据`);
+  }catch(e){
+    console.error("同步失败:", e);
+    dot.className='dot';set('st','⚠ 数据读取失败，请检查表格');
+  }
+  
+  // 刷新大盘画面
+  const s=$('ds').value, en=$('de').value;
+  build(s,en);
+}
 </script>
 </body>
 </html>
