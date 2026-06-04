@@ -183,16 +183,15 @@ html,body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;fo
 </div>
 
 <script>
-// 🌟 数据容器全部清空，等待同步注入！
 let D = [];
 let JO = [];
 
-// ⚠️ 极其重要：把这里的链接换成你从 Google Sheets 发布的 CSV 链接！
+// 你的两个真实 CSV 链接
 const ORDERS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSm0KUChpHKrOj8ljJ7uEf4YItMe8gADvlsWpmdFAR_vTDy42dxKdBfZ7CbjJEqPpbHlXBFrgOrU2pE/pub?output=csv"; 
 const ADS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4LW7fng5FOPnXX76HK945G7NKQUJsb_SDkfSGc2QIDLAx_BjJQwsZE78tW6gwLvGFT7CqNrFPA-1f/pub?output=csv";
 
 const GOAL = 150000;
-const TODAY = new Date().toISOString().slice(0,10); // 自动获取今天日期
+const TODAY = new Date().toISOString().slice(0,10); 
 
 const rm=(n,d=0)=>"RM "+(+n||0).toFixed(d).replace(/\B(?=(\d{3})+(?!\d))/g,",");
 const fN=n=>(+n||0).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,",");
@@ -212,7 +211,7 @@ function getR(f){
     case'lastMonth': 
         const lm=new Date(y,d.getMonth()-1,1); const lme=new Date(y,d.getMonth(),0);
         return{s:ymd(lm),e:ymd(lme)};
-    case'quarter': return{s:`${y}-01-01`,e:TODAY}; // 简化季度为今年至今
+    case'quarter': return{s:`${y}-01-01`,e:TODAY};
     case'all': return{s:'2026-01-01',e:TODAY};
     default: return{s:$('ds').value,e:$('de').value};
   }
@@ -324,18 +323,11 @@ function build(s,e){
   }
 }
 
-// 🌐 终极双擎同步：自动抓取并合并 订单 和 广告
+// 🌐 终极双擎同步
 async function doSync(){
   const dot=$('dot');dot.className='dot sp';set('st','下载数据中...');
   
-  if(ORDERS_CSV_URL.includes('替换') || ADS_CSV_URL.includes('替换')){
-      alert("请先在代码里贴上你的真实 CSV 链接！");
-      dot.className='dot';set('st','⚠ 缺少链接');
-      return;
-  }
-
   try{
-    // 同时从两个 Google Sheets 抓取数据
     const [resOrd, resAds] = await Promise.all([
       fetch(ORDERS_CSV_URL + '&t=' + Date.now()),
       fetch(ADS_CSV_URL + '&t=' + Date.now())
@@ -344,81 +336,84 @@ async function doSync(){
     const txtOrd = await resOrd.text();
     const txtAds = await resAds.text();
 
-    // 每次同步前清空旧数据，保证永远是最新 Live 状态！
     D.length = 0; 
     JO.length = 0;
     
-    // 🛠️ 解析 1：订单表 (生成 JO 排名 和 每日销售额)
+    // 超强清洗器：把 "RM 1,500.00" 清洗成 1500
+    const cleanNum = (str) => parseFloat((str||'').replace(/[^0-9.-]+/g, '')) || 0;
+
+    // 🛠️ 解析 1：订单表
     const linesO = txtOrd.trim().split('\n').slice(1);
     linesO.forEach(line => {
       const c = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/(^"|"$)/g, '').trim());
       if(c.length < 5) return;
       
-      const date = c[0]; // 日期
-      if(!date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
+      // 兼容所有奇怪的日期格式
+      const dObj = new Date(c[0]);
+      if(isNaN(dObj)) return; 
+      const date = dObj.toISOString().slice(0,10);
 
-      const sales = parseFloat(c[1]?.replace(/,/g,'')) || 0; // 金额 (假定在第2列，请根据你的表头调整下标)
-      const type = c[2]?.toUpperCase(); // NEW 或 REPEAT (假定在第3列)
-      const channel = c[3] || 'Other'; // 渠道 (假定在第4列)
-      const state = c[4] || 'Other'; // 州 (假定在第5列)
-      const region = c[5] || 'WM'; // 区域 (假定在第6列)
+      // 这里完美对应你之前的列：渠道(B), 州(C), 区域(D), 销售额(E), 新老客(F)
+      const channel = c[1] || 'Other';      
+      const state   = c[2] || 'Other';      
+      const region  = c[3] || 'WM';         
+      const sales   = cleanNum(c[4]);       
+      const type    = (c[5] || '').toUpperCase();  
 
-      // 录入单笔订单，用来做排行榜
-      JO.push([date, channel, state, region, sales, type]);
+      if(sales > 0) {
+          JO.push([date, channel, state, region, sales, type]);
+      }
 
-      // 汇总到每日大盘
       let i = D.findIndex(x => x[0] === date);
       if(i < 0) {
-        D.push([date, 0, 0, 0, 0, 0, 0, 0]); // [日期, 销售额, 广告费, 消息, 新客单, 老客单, 新销售, 老销售]
+        D.push([date, 0, 0, 0, 0, 0, 0, 0]); 
         i = D.length - 1;
       }
-      D[i][1] += sales; // 累计每日总销售额
-      if(type === 'NEW' || type === '新客') { 
-          D[i][4]++; // 新客单数 +1
-          D[i][6] += sales; // 新客金额累加
+      D[i][1] += sales; 
+      if(type.includes('NEW') || type.includes('新客')) { 
+          D[i][4]++; 
+          D[i][6] += sales; 
       } else { 
-          D[i][5]++; // 老客单数 +1
-          D[i][7] += sales; // 老客金额累加
+          D[i][5]++; 
+          D[i][7] += sales; 
       }
     });
 
-    // 🛠️ 解析 2：广告表 (生成 广告费 和 消息数)
+    // 🛠️ 解析 2：广告表
     const linesA = txtAds.trim().split('\n').slice(1);
     linesA.forEach(line => {
       const c = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/(^"|"$)/g, '').trim());
       if(c.length < 3) return;
       
-      const date = c[0];
-      if(!date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
+      const dObj = new Date(c[0]);
+      if(isNaN(dObj)) return;
+      const date = dObj.toISOString().slice(0,10);
 
-      // 假设你的广告表：第2列和第3列加起来是总花费，第5列是消息数
-      const spend = (parseFloat(c[1]?.replace(/,/g,'')) || 0) + (parseFloat(c[2]?.replace(/,/g,'')) || 0);
-      const msg = parseInt(c[4]?.replace(/,/g,'')) || 0;
+      // 花费在 B列 和 C列相加，消息数在 E列 (c[4])
+      const spend = cleanNum(c[1]) + cleanNum(c[2]); 
+      const msg = parseInt(cleanNum(c[4])) || 0;
 
       let i = D.findIndex(x => x[0] === date);
       if(i < 0) {
         D.push([date, 0, 0, 0, 0, 0, 0, 0]);
         i = D.length - 1;
       }
-      D[i][2] += spend; // 注入当天的广告费
-      D[i][3] += msg; // 注入当天的消息数
+      D[i][2] += spend;
+      D[i][3] += msg;
     });
 
-    // 按日期重新排序一下大盘数据
     D.sort((a,b) => a[0].localeCompare(b[0]));
 
     dot.className='dot';
-    set('st',`✓ ${new Date().toLocaleTimeString('zh-MY',{hour:'2-digit',minute:'2-digit'})} · 数据全自动拼装完成！`);
+    set('st',`✓ ${new Date().toLocaleTimeString('zh-MY',{hour:'2-digit',minute:'2-digit'})} · 数据同步成功！`);
     
-    // 渲染画面
-    setF('thisMonth'); // 默认显示本月
+    setF('thisMonth'); 
   }catch(e){
     console.error("同步失败:", e);
-    dot.className='dot';set('st','⚠ 读取失败，请检查 CSV 链接是否公开');
+    dot.className='dot';set('st','⚠ 读取失败，请检查 CSV 链接');
   }
 }
 
-// 页面加载完成后，自动触发一次同步！
 window.onload = () => {
     doSync();
 };
